@@ -103,8 +103,3 @@ When running the project, you should see:
 ## Security Note
 
 This project is intentionally vulnerable and should only be used for educational purposes. Do not deploy it in production environments.
-
-## License
-
-MIT License
->>>>>>> e89cff6 (Initial commit: Add vulnerable proxy project with documentation)
