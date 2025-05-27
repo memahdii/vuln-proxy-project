@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # vuln-proxy-project
 =======
 # Vulnerable Proxy Project
