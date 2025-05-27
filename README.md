@@ -1,5 +1,3 @@
-# vuln-proxy-project
-=======
 # Vulnerable Proxy Project
 
 A demonstration project showcasing SQL injection vulnerabilities and their mitigation through a proxy server. This project consists of three main components:
