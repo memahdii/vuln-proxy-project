@@ -3,14 +3,15 @@ services:
   vulnerable_app:
     build: ./vulnerable_app
     container_name: vulnerable_app
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
 
   proxy:
     build: ./proxy
     container_name: proxy
     environment:
       - ENABLE_SQLI_FILTER=1
+      - ENABLE_XSS_FILTER=1
     ports:
       - "8000:8000"
     depends_on:
@@ -21,3 +22,4 @@ services:
     container_name: attacker
     depends_on:
       - proxy
+

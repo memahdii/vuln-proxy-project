@@ -27,6 +27,21 @@ def login():
     else:
         return "Login failed"
 
+
+comments = []
+
+@app.route("/comment", methods=["GET", "POST"])
+def comment():
+    if request.method == "POST":
+        text = request.form.get("text", "")
+        comments.append(text)
+    return "<h1>Comments</h1>" + "<br>".join(comments) + '''
+        <form method="post">
+            <input name="text">
+            <input type="submit">
+        </form>
+    '''
+
 if __name__ == "__main__":
     init_db()
     app.run(host="0.0.0.0", port=5000)

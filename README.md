@@ -1,9 +1,9 @@
 # Vulnerable Proxy Project
 
-A demonstration project showcasing SQL injection vulnerabilities and their mitigation through a proxy server. This project consists of three main components:
+A demonstration project showcasing SQL injection and XSS vulnerabilities and their mitigation through a proxy server. This project consists of three main components:
 
-1. A vulnerable Flask application with SQL injection vulnerabilities
-2. A proxy server that can filter SQL injection attempts
+1. A vulnerable Flask application with SQL injection and XSS vulnerabilities
+2. A proxy server that can filter SQL injection and XSS attempts
 3. An attacker script that demonstrates both normal and malicious requests
 
 ## Project Structure
@@ -19,7 +19,8 @@ A demonstration project showcasing SQL injection vulnerabilities and their mitig
 │   └── proxy.py
 └── attacker/
     ├── Dockerfile
-    └── sqli_attack.py
+    ├── sqli_attack.py
+    └── xss_attack.py
 ```
 
 ## Components
@@ -28,17 +29,20 @@ A demonstration project showcasing SQL injection vulnerabilities and their mitig
 - Runs on port 5000
 - Simple Flask application with SQLite database
 - Contains a vulnerable login endpoint that is susceptible to SQL injection
+- Contains a vulnerable comment system that is susceptible to XSS
 - Uses string concatenation for SQL queries (intentionally vulnerable)
+- Displays user comments without proper sanitization (intentionally vulnerable)
 
 ### Proxy Server
 - Runs on port 8000
 - Acts as a reverse proxy to the vulnerable application
-- Implements SQL injection filtering
-- Can be configured to enable/disable filtering
+- Implements SQL injection and XSS filtering
+- Can be configured to enable/disable filtering for each vulnerability type
 
 ### Attacker Script
 - Demonstrates both normal and malicious login attempts
 - Tests the proxy's SQL injection filtering capabilities
+- Tests the proxy's XSS filtering capabilities
 
 ## Building and Running
 
@@ -66,22 +70,48 @@ This allows SQL injection attacks like:
 username=admin' OR 1=1 --&password=anything
 ```
 
+### XSS Vulnerability
+The vulnerable application has a comment system that stores and displays user input without proper sanitization:
+```python
+@app.route("/comment", methods=["GET", "POST"])
+def comment():
+    if request.method == "POST":
+        text = request.form.get("text", "")
+        comments.append(text)
+    return "<h1>Comments</h1>" + "<br>".join(comments)
+```
+
+This allows XSS attacks like:
+```html
+<script>alert('XSS')</script>
+```
+
 ### Mitigation
-The proxy server implements basic SQL injection filtering by checking for common SQL injection patterns:
+The proxy server implements filtering for both vulnerabilities:
+
+#### SQL Injection Filter
+Checks for common SQL injection patterns:
 - OR/AND conditions
 - Comment markers (--)
 - UNION statements
 - Common tautologies (1=1)
 
+#### XSS Filter
+Checks for common XSS patterns:
+- `<script>` tags
+- Event handlers (onload, onerror, etc.)
+- JavaScript protocol handlers
+- Malicious HTML attributes
+
 ## Configuration
 
-### SQL Injection Filter
-The proxy's SQL injection filter can be enabled/disabled using the `ENABLE_SQLI_FILTER` environment variable in `docker-compose.yml`:
+Both filters can be enabled/disabled using environment variables in `docker-compose.yml`:
 
 ```yaml
 proxy:
   environment:
     - ENABLE_SQLI_FILTER=1  # 1 to enable, 0 to disable
+    - ENABLE_XSS_FILTER=1   # 1 to enable, 0 to disable
 ```
 
 ## Expected Output
@@ -98,6 +128,18 @@ When running the project, you should see:
 ```
 💥 Testing SQL injection:
 [admin' OR 1=1 -- | anything] → 403 | Blocked by SQLi filter
+```
+
+3. Normal comment:
+```
+🧪 Testing normal comment:
+[Hello, this is a normal comment.] → 200 | Accepted
+```
+
+4. XSS attempt:
+```
+🧪 Testing XSS injection:
+[<script>alert('XSS')</script>] → 403 | Blocked by XSS filter
 ```
 
 ## Security Note
