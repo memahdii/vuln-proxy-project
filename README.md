@@ -1,9 +1,18 @@
 # Vulnerable Proxy Project
 
-A demonstration project showcasing SQL injection and XSS vulnerabilities and their mitigation through a proxy server. This project consists of three main components:
+A demonstration project showcasing SQL injection and XSS vulnerabilities and their mitigation through a proxy server. This project implements a security pattern where a proxy server acts as a protective layer between clients and a vulnerable application.
+
+## System Architecture
+
+```
+[Attacker] → [Proxy] → [Vulnerable App]
+   (8000)     (8000)      (5000)
+```
+
+The system consists of three main components:
 
 1. A vulnerable Flask application with SQL injection and XSS vulnerabilities
-2. A proxy server that can filter SQL injection and XSS attempts
+2. A proxy server that filters malicious requests before they reach the vulnerable application
 3. An attacker script that demonstrates both normal and malicious requests
 
 ## Project Structure
@@ -16,7 +25,11 @@ A demonstration project showcasing SQL injection and XSS vulnerabilities and the
 │   └── app.py
 ├── proxy/
 │   ├── Dockerfile
-│   └── proxy.py
+│   ├── proxy.py
+│   └── filters/
+│       ├── __init__.py
+│       ├── sqli_filter.py
+│       └── xss_filter.py
 └── attacker/
     ├── Dockerfile
     ├── sqli_attack.py
@@ -28,21 +41,43 @@ A demonstration project showcasing SQL injection and XSS vulnerabilities and the
 ### Vulnerable Application
 - Runs on port 5000
 - Simple Flask application with SQLite database
-- Contains a vulnerable login endpoint that is susceptible to SQL injection
-- Contains a vulnerable comment system that is susceptible to XSS
-- Uses string concatenation for SQL queries (intentionally vulnerable)
-- Displays user comments without proper sanitization (intentionally vulnerable)
+- Contains two vulnerable endpoints:
+  1. Login endpoint (SQL Injection vulnerable):
+     ```python
+     @app.route("/login")
+     def login():
+         # Vulnerable because it uses string concatenation
+         query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+     ```
+  2. Comment endpoint (XSS vulnerable):
+     ```python
+     @app.route("/comment", methods=["GET", "POST"])
+     def comment():
+         # Vulnerable because it displays user input without sanitization
+         return "<h1>Comments</h1>" + "<br>".join(comments)
+     ```
 
 ### Proxy Server
 - Runs on port 8000
 - Acts as a reverse proxy to the vulnerable application
-- Implements SQL injection and XSS filtering
-- Can be configured to enable/disable filtering for each vulnerability type
+- Implements two modular filters:
+  1. SQL Injection Filter:
+     - Checks for SQL injection patterns in request parameters
+     - Blocks requests containing malicious SQL patterns
+  2. XSS Filter:
+     - Checks for XSS patterns in both GET and POST requests
+     - Blocks requests containing malicious HTML/JavaScript
+- Can be configured to enable/disable each filter independently
 
 ### Attacker Script
-- Demonstrates both normal and malicious login attempts
-- Tests the proxy's SQL injection filtering capabilities
-- Tests the proxy's XSS filtering capabilities
+- Demonstrates both normal and malicious requests
+- Tests the proxy's filtering capabilities:
+  1. SQL Injection Tests:
+     - Normal login attempt
+     - SQL injection attempt
+  2. XSS Tests:
+     - Normal comment submission
+     - XSS payload submission
 
 ## Building and Running
 
@@ -55,6 +90,34 @@ cd vuln-proxy-project
 2. Build and run the containers:
 ```bash
 docker-compose up --build
+```
+
+## How It Works
+
+### Request Flow
+
+1. **Normal Login**:
+```
+Attacker → Proxy → Vulnerable App
+[admin | adminpass] → [Check: No SQLi] → [Execute Query] → [Login Successful]
+```
+
+2. **SQL Injection Attempt**:
+```
+Attacker → Proxy → Blocked
+[admin' OR 1=1 -- | anything] → [Check: SQLi Detected] → [403 Forbidden]
+```
+
+3. **Normal Comment**:
+```
+Attacker → Proxy → Vulnerable App
+[Hello, this is a normal comment.] → [Check: No XSS] → [Display Comment]
+```
+
+4. **XSS Attempt**:
+```
+Attacker → Proxy → Blocked
+[<script>alert('XSS')</script>] → [Check: XSS Detected] → [403 Forbidden]
 ```
 
 ## Vulnerabilities and Mitigation
