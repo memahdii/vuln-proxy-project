@@ -11,21 +11,21 @@ def test_comment(text):
 def verify_xss(payload):
     response = requests.get(URL)
     if payload in response.text:
-        print(f"💥 XSS test failed: Payload reflected in response!")
+        print(f"XSS test failed: Payload reflected in response!")
     else:
-        print(f"✅ XSS test passed: Payload filtered or not reflected.")
+        print(f"XSS test passed: Payload filtered or not reflected.")
 
 def main():
-    print("🧪 Testing normal comment:")
+    print("Testing normal comment:")
     normal_comment = "Hello, this is a normal comment."
     test_comment(normal_comment)
 
-    print("\n🧪 Testing XSS injection:")
+    print("\nTesting XSS injection:")
     xss_payload = "<script>alert('XSS')</script>"
     if test_comment(xss_payload):
         verify_xss(xss_payload)
     else:
-        print("❌ XSS payload blocked on submission.")
+        print("XSS payload blocked on submission.")
 
 if __name__ == "__main__":
     main()

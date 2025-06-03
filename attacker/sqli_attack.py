@@ -8,10 +8,10 @@ def test_login(username, password):
     print(f"[{username} | {password}] → {response.status_code} | {response.text.strip()}")
 
 def main():
-    print("🔒 Testing normal login:")
+    print("Testing normal login:")
     test_login("admin", "adminpass")
     
-    print("\n💥 Testing SQL injection:")
+    print("\nTesting SQL injection:")
     test_login("admin' OR 1=1 --", "anything")
 
 if __name__ == "__main__":

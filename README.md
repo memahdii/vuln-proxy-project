@@ -27,9 +27,9 @@ The system consists of three main components:
 │   ├── Dockerfile
 │   ├── proxy.py
 │   └── filters/
-│       ├── __init__.py
-│       ├── sqli_filter.py
-│       └── xss_filter.py
+│       ├── __init__.py      # Python package initialization
+│       ├── sqli_filter.py   # SQL injection filter module
+│       └── xss_filter.py    # XSS filter module
 └── attacker/
     ├── Dockerfile
     ├── sqli_attack.py
@@ -68,6 +68,12 @@ The system consists of three main components:
      - Checks for XSS patterns in both GET and POST requests
      - Blocks requests containing malicious HTML/JavaScript
 - Can be configured to enable/disable each filter independently
+- Uses a modular filter system:
+  ```python
+  # filters/__init__.py
+  from .sqli_filter import is_enabled as sqli_enabled, detect_attack as detect_sqli
+  from .xss_filter import is_enabled as xss_enabled, detect_attack as detect_xss
+  ```
 
 ### Attacker Script
 - Demonstrates both normal and malicious requests
@@ -177,31 +183,49 @@ proxy:
     - ENABLE_XSS_FILTER=1   # 1 to enable, 0 to disable
 ```
 
+## Development Notes
+
+### Python Module Structure
+The proxy server uses a modular filter system:
+1. Each filter is implemented as a separate Python module in the `filters` directory
+2. The `__init__.py` file makes the directory a proper Python package
+3. The `PYTHONPATH` environment variable is set in the Dockerfile to ensure Python can find the modules
+4. Filters are imported and used in `proxy.py` using absolute imports
+
+### Adding New Filters
+To add a new filter:
+1. Create a new Python module in the `filters` directory
+2. Implement the required functions:
+   - `is_enabled()`: Check if the filter is enabled
+   - `detect_attack()`: Implement the attack detection logic
+3. Add the filter to `filters/__init__.py`
+4. Update `proxy.py` to use the new filter
+
 ## Expected Output
 
 When running the project, you should see:
 
 1. Normal login attempt:
 ```
-🔒 Testing normal login:
+Testing normal login:
 [admin | adminpass] → 200 | Login successful
 ```
 
 2. SQL injection attempt:
 ```
-💥 Testing SQL injection:
+Testing SQL injection:
 [admin' OR 1=1 -- | anything] → 403 | Blocked by SQLi filter
 ```
 
 3. Normal comment:
 ```
-🧪 Testing normal comment:
+Testing normal comment:
 [Hello, this is a normal comment.] → 200 | Accepted
 ```
 
 4. XSS attempt:
 ```
-🧪 Testing XSS injection:
+Testing XSS injection:
 [<script>alert('XSS')</script>] → 403 | Blocked by XSS filter
 ```
 
