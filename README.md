@@ -27,9 +27,9 @@ The system consists of three main components:
 │   ├── Dockerfile
 │   ├── proxy.py
 │   └── filters/
-│       ├── __init__.py      # Python package initialization
-│       ├── sqli_filter.py   # SQL injection filter module
-│       └── xss_filter.py    # XSS filter module
+│       ├── __init__.py      
+│       ├── sqli_filter.py   
+│       └── xss_filter.py    
 └── attacker/
     ├── Dockerfile
     ├── sqli_attack.py
