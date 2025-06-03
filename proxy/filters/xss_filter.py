@@ -1,38 +1,42 @@
 import os
-import re
+import re  # Regular expressions used to detect XSS patterns
 
+# Function to check whether the XSS filter is enabled
 def is_enabled():
-    # Returns True if XSS filter enabled via env var
+    # Returns True if the environment variable ENABLE_XSS_FILTER is set to "1"
     return os.environ.get("ENABLE_XSS_FILTER", "0") == "1"
 
+# Function to detect potential XSS attack patterns in input strings
 def detect_attack(value):
-    if not isinstance(value, str):
+    if not isinstance(value, str):  # Only check string input
         return False
         
-    # Check for common XSS patterns
+    # List of regular expressions to match common XSS payloads
     xss_patterns = [
-        r'<script.*?>.*?</script.*?>',  # Script tags
-        r'on\w+=',                      # Event handlers
-        r'javascript:',                 # JavaScript protocol
-        r'<img.*?onerror=',            # Image with onerror
-        r'<svg.*?onload=',             # SVG with onload
-        r'<iframe.*?>',                # iframe tags
-        r'<object.*?>',                # object tags
-        r'<embed.*?>',                 # embed tags
-        r'<form.*?>',                  # form tags
-        r'<input.*?on\w+=',           # input with event handlers
-        r'<a.*?on\w+=',               # anchor with event handlers
-        r'<div.*?on\w+=',             # div with event handlers
-        r'<style.*?>.*?</style.*?>',  # style tags
-        r'<link.*?on\w+=',            # link with event handlers
-        r'<meta.*?on\w+=',            # meta with event handlers
+        r'<script.*?>.*?</script.*?>',   # Full <script> tags
+        r'on\w+=',                       # Inline event handlers (e.g. onclick, onload)
+        r'javascript:',                  # javascript: protocol
+        r'<img.*?onerror=',              # <img> tag with onerror
+        r'<svg.*?onload=',               # <svg> tag with onload
+        r'<iframe.*?>',                  # <iframe> tag
+        r'<object.*?>',                  # <object> tag
+        r'<embed.*?>',                   # <embed> tag
+        r'<form.*?>',                    # <form> tag
+        r'<input.*?on\w+=',              # <input> with event handler
+        r'<a.*?on\w+=',                  # <a> tag with event handler
+        r'<div.*?on\w+=',                # <div> with inline JS
+        r'<style.*?>.*?</style.*?>',     # <style> tags
+        r'<link.*?on\w+=',               # <link> tag with event handler
+        r'<meta.*?on\w+=',               # <meta> tag with event handler
     ]
     
-    # Compile patterns for better performance
+    # Compile regex patterns for performance and case-insensitive matching
     compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in xss_patterns]
     
-    # Check for XSS patterns
+    # Scan input for any matching XSS pattern
     for pattern in compiled_patterns:
         if pattern.search(value):
-            return True
-    return False
+            return True  # XSS pattern detected
+
+    return False  # No suspicious patterns found
+

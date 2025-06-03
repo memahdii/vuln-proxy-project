@@ -95,7 +95,7 @@ cd vuln-proxy-project
 
 2. Build and run the containers:
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 ## How It Works
