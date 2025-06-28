@@ -5,10 +5,12 @@ def is_enabled():
     # Returns True if XSS filter enabled via env var
     return os.environ.get("ENABLE_XSS_FILTER", "0") == "1"
 
-def detect_attack(value):
-    if not isinstance(value, str):
-        return False
-        
+def detect_attack(request_data):
+    """
+    Detect XSS attacks in request data
+    Args:
+        request_data: dict containing 'args', 'form', 'method', 'path'
+    """
     # Check for common XSS patterns
     xss_patterns = [
         r'<script.*?>.*?</script.*?>',  # Script tags
@@ -31,8 +33,28 @@ def detect_attack(value):
     # Compile patterns for better performance
     compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in xss_patterns]
     
-    # Check for XSS patterns
-    for pattern in compiled_patterns:
-        if pattern.search(value):
-            return True
+    # Check GET parameters
+    if 'args' in request_data:
+        for key, value in request_data['args'].items():
+            if not isinstance(value, str):
+                continue
+            
+            # Check for XSS patterns
+            for pattern in compiled_patterns:
+                if pattern.search(value):
+                    print(f"XSS pattern detected: {pattern.pattern} in {key}={value}")
+                    return True
+    
+    # Check POST form data
+    if 'form' in request_data and request_data['method'] == 'POST':
+        for key, value in request_data['form'].items():
+            if not isinstance(value, str):
+                continue
+            
+            # Check for XSS patterns
+            for pattern in compiled_patterns:
+                if pattern.search(value):
+                    print(f"XSS pattern detected: {pattern.pattern} in {key}={value}")
+                    return True
+    
     return False

@@ -1,32 +1,29 @@
 import os
 import requests
 from flask import Flask, request, Response
-from filters.sqli_filter import is_enabled as sqli_enabled, detect_attack as detect_sqli
-from filters.xss_filter import is_enabled as xss_enabled, detect_attack as detect_xss
+from filters import filter_manager
 
 app = Flask(__name__)
 
 VULNERABLE_APP_URL = "http://vulnerable_app:5000"
 
+
 @app.route('/<path:path>', methods=["GET", "POST"])
 def proxy(path):
     target_url = f"{VULNERABLE_APP_URL}/{path}"
 
-    # --- Check SQLi (GET) ---
-    if sqli_enabled() and detect_sqli(request.args):
-        return Response("Blocked by SQLi filter", status=403)
-
-    # --- Check XSS (GET) ---
-    if xss_enabled():
-        for value in request.args.values():
-            if detect_xss(value):
-                return Response("Blocked by XSS filter", status=403)
-
-    # --- Check XSS (POST) ---
-    if request.method == "POST" and xss_enabled():
-        for value in request.form.values():
-            if detect_xss(value):
-                return Response("Blocked by XSS filter (POST body)", status=403)
+    # --- Dynamic Filter Check ---
+    # Prepare request data for filters
+    request_data = {
+        'args': request.args,
+        'form': request.form,
+        'method': request.method,
+        'path': path
+    }
+    
+    # Check all discovered filters
+    if filter_manager.check_all_filters(request_data):
+        return Response("Blocked by security filter", status=403)
 
     # Forward to vulnerable app
     resp = requests.request(

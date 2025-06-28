@@ -9,6 +9,8 @@ def init_db():
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT)")
     c.execute("INSERT INTO users (username, password) VALUES ('admin', 'adminpass')")
+    c.execute("INSERT INTO users (username, password) VALUES ('mahdi', 'mahdipass')")
+    c.execute("INSERT INTO users (username, password) VALUES ('igor', 'igorpass')")
     conn.commit()
     conn.close()
 

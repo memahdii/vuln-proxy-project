@@ -11,7 +11,7 @@ services:
     container_name: proxy
     environment:
       - ENABLE_SQLI_FILTER=1
-      - ENABLE_XSS_FILTER=1
+      - ENABLE_XSS_FILTER=0
     ports:
       - "8000:8000"
     depends_on:

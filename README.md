@@ -1,6 +1,13 @@
 # Vulnerable Proxy Project
 
-A demonstration project showcasing SQL injection and XSS vulnerabilities and their mitigation through a proxy server. This project implements a security pattern where a proxy server acts as a protective layer between clients and a vulnerable application.
+## Overview
+This project demonstrates a vulnerable web application protected by a **dynamic proxy filter system**. It is designed for security testing and learning about web attacks and defenses.
+
+- **vulnerable_app/**: The intentionally vulnerable web app (Flask)
+- **proxy/**: The proxy that filters attacks using **dynamically discovered filters**
+- **attacker/**: **Dynamic attack system** that automatically discovers and runs all attack modules
+
+---
 
 ## System Architecture
 
@@ -12,8 +19,10 @@ A demonstration project showcasing SQL injection and XSS vulnerabilities and the
 The system consists of three main components:
 
 1. A vulnerable Flask application with SQL injection and XSS vulnerabilities
-2. A proxy server that filters malicious requests before they reach the vulnerable application
-3. An attacker script that demonstrates both normal and malicious requests
+2. A **dynamic proxy server** that automatically discovers and applies security filters
+3. A **dynamic attacker system** that automatically discovers and runs all attack modules
+
+---
 
 ## Project Structure
 
@@ -27,14 +36,35 @@ The system consists of three main components:
 │   ├── Dockerfile
 │   ├── proxy.py
 │   └── filters/
-│       ├── __init__.py      
-│       ├── sqli_filter.py   
-│       └── xss_filter.py    
+│       ├── __init__.py          # Dynamic filter manager
+│       ├── sqli_filter.py       # SQL injection filter
+│       ├── xss_filter.py        # XSS filter
+│       └── template_filter.py   # Template for new filters
 └── attacker/
     ├── Dockerfile
-    ├── sqli_attack.py
-    └── xss_attack.py
+    ├── attack_manager.py        # Dynamic attack manager
+    └── attacks/
+        ├── __init__.py
+        ├── sqli_attack.py       # SQL injection attacks
+        ├── xss_attack.py        # XSS attacks
+        └── template_attack.py   # Template for new attacks
 ```
+
+---
+
+## How the Dynamic System Works
+
+### **Dynamic Attack Discovery**
+- Any Python file in `attacker/attacks/` with a `name` and `run_attack()` function is automatically discovered
+- No need to modify main code to add new attacks!
+- The `attack_manager.py` scans the directory and runs all valid attack modules
+
+### **Dynamic Filter Discovery**
+- Any Python file in `proxy/filters/` with `is_enabled()` and `detect_attack()` functions is automatically discovered
+- No need to modify main code to add new filters!
+- The `filter_manager` scans the directory and applies all enabled filters
+
+---
 
 ## Components
 
@@ -42,14 +72,14 @@ The system consists of three main components:
 - Runs on port 5000
 - Simple Flask application with SQLite database
 - Contains two vulnerable endpoints:
-  1. Login endpoint (SQL Injection vulnerable):
+  1. **Login endpoint** (SQL Injection vulnerable):
      ```python
      @app.route("/login")
      def login():
          # Vulnerable because it uses string concatenation
          query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
      ```
-  2. Comment endpoint (XSS vulnerable):
+  2. **Comment endpoint** (XSS vulnerable):
      ```python
      @app.route("/comment", methods=["GET", "POST"])
      def comment():
@@ -57,33 +87,20 @@ The system consists of three main components:
          return "<h1>Comments</h1>" + "<br>".join(comments)
      ```
 
-### Proxy Server
+### Dynamic Proxy Server
 - Runs on port 8000
 - Acts as a reverse proxy to the vulnerable application
-- Implements two modular filters:
-  1. SQL Injection Filter:
-     - Checks for SQL injection patterns in request parameters
-     - Blocks requests containing malicious SQL patterns
-  2. XSS Filter:
-     - Checks for XSS patterns in both GET and POST requests
-     - Blocks requests containing malicious HTML/JavaScript
-- Can be configured to enable/disable each filter independently
-- Uses a modular filter system:
-  ```python
-  # filters/__init__.py
-  from .sqli_filter import is_enabled as sqli_enabled, detect_attack as detect_sqli
-  from .xss_filter import is_enabled as xss_enabled, detect_attack as detect_xss
-  ```
+- **Automatically discovers and applies all filters** in the `filters/` directory
+- Each filter can be enabled/disabled independently via environment variables
+- Uses a **modular filter system** that requires no code changes to add new filters
 
-### Attacker Script
-- Demonstrates both normal and malicious requests
-- Tests the proxy's filtering capabilities:
-  1. SQL Injection Tests:
-     - Normal login attempt
-     - SQL injection attempt
-  2. XSS Tests:
-     - Normal comment submission
-     - XSS payload submission
+### Dynamic Attacker System
+- **Automatically discovers and runs all attacks** in the `attacks/` directory
+- Each attack module is self-contained and follows a standard interface
+- Provides comprehensive testing of both normal and malicious requests
+- Requires no code changes to add new attack types
+
+---
 
 ## Building and Running
 
@@ -95,8 +112,15 @@ cd vuln-proxy-project
 
 2. Build and run the containers:
 ```bash
-docker-compose up --build
+docker compose up --build -d
 ```
+
+3. View attack results:
+```bash
+docker compose logs attacker
+```
+
+---
 
 ## How It Works
 
@@ -126,6 +150,8 @@ Attacker → Proxy → Blocked
 [<script>alert('XSS')</script>] → [Check: XSS Detected] → [403 Forbidden]
 ```
 
+---
+
 ## Vulnerabilities and Mitigation
 
 ### SQL Injection Vulnerability
@@ -138,6 +164,8 @@ This allows SQL injection attacks like:
 ```
 username=admin' OR 1=1 --&password=anything
 ```
+
+**Mitigation**: The dynamic SQLi filter uses regex patterns to detect real SQL injection attempts while allowing legitimate usernames like "Igor".
 
 ### XSS Vulnerability
 The vulnerable application has a comment system that stores and displays user input without proper sanitization:
@@ -155,26 +183,13 @@ This allows XSS attacks like:
 <script>alert('XSS')</script>
 ```
 
-### Mitigation
-The proxy server implements filtering for both vulnerabilities:
+**Mitigation**: The dynamic XSS filter detects and blocks malicious HTML/JavaScript patterns.
 
-#### SQL Injection Filter
-Checks for common SQL injection patterns:
-- OR/AND conditions
-- Comment markers (--)
-- UNION statements
-- Common tautologies (1=1)
-
-#### XSS Filter
-Checks for common XSS patterns:
-- `<script>` tags
-- Event handlers (onload, onerror, etc.)
-- JavaScript protocol handlers
-- Malicious HTML attributes
+---
 
 ## Configuration
 
-Both filters can be enabled/disabled using environment variables in `docker-compose.yml`:
+Filters can be enabled/disabled using environment variables in `docker-compose.yml`:
 
 ```yaml
 proxy:
@@ -183,52 +198,163 @@ proxy:
     - ENABLE_XSS_FILTER=1   # 1 to enable, 0 to disable
 ```
 
-## Development Notes
+---
 
-### Python Module Structure
-The proxy server uses a modular filter system:
-1. Each filter is implemented as a separate Python module in the `filters` directory
-2. The `__init__.py` file makes the directory a proper Python package
-3. The `PYTHONPATH` environment variable is set in the Dockerfile to ensure Python can find the modules
-4. Filters are imported and used in `proxy.py` using absolute imports
+## How to Add a New Attack
 
-### Adding New Filters
-To add a new filter:
-1. Create a new Python module in the `filters` directory
-2. Implement the required functions:
-   - `is_enabled()`: Check if the filter is enabled
-   - `detect_attack()`: Implement the attack detection logic
-3. Add the filter to `filters/__init__.py`
-4. Update `proxy.py` to use the new filter
+1. **Copy the template:**
+   ```bash
+   cp attacker/attacks/template_attack.py attacker/attacks/my_new_attack.py
+   ```
+
+2. **Edit `my_new_attack.py`:**
+   - Change the `name`, `description`, and `category`
+   - Implement your test cases in the `test_cases` list
+   - Add your attack logic in the `run_attack()` function
+
+3. **Example:**
+   ```python
+   name = "Command Injection Attack"
+   description = "Tests command injection vulnerabilities"
+   category = "Injection"
+
+   def run_attack(target_url: str = "http://proxy:8000/command", **kwargs):
+       test_cases = [
+           {"name": "Basic Command Injection", "payload": "; ls -la"}
+       ]
+       # ... rest of logic
+   ```
+
+4. **Rebuild and run:**
+   ```bash
+   docker compose build attacker
+   docker compose up attacker
+   ```
+
+**The attack will be automatically discovered and run!**
+
+---
+
+## How to Add a New Filter
+
+1. **Copy the template:**
+   ```bash
+   cp proxy/filters/template_filter.py proxy/filters/command_injection_filter.py
+   ```
+
+2. **Edit `command_injection_filter.py`:**
+   - Change the `is_enabled()` function to use a relevant environment variable
+   - Add your detection regex patterns in `detect_attack()`
+
+3. **Example:**
+   ```python
+   def is_enabled():
+       return os.environ.get("ENABLE_COMMAND_INJECTION_FILTER", "1") == "1"
+
+   def detect_attack(request_data):
+       patterns = [
+           r'[;&|`]',  # Command separators
+           r'\b(cat|ls|pwd|whoami|id)\b',  # Common commands
+       ]
+       # ... detection logic
+   ```
+
+4. **Rebuild and run:**
+   ```bash
+   docker compose build proxy
+   docker compose up proxy
+   ```
+
+**The filter will be automatically discovered and applied!**
+
+---
+
+## Usage
+
+### Start the System
+```bash
+docker compose up --build -d
+```
+
+### Run All Attacks
+```bash
+docker compose logs attacker
+```
+
+### Change Filter Settings
+Edit the environment variables in `docker-compose.yml` for the proxy service:
+```yaml
+environment:
+  - ENABLE_SQLI_FILTER=0  # Disable SQLi filter
+  - ENABLE_XSS_FILTER=1   # Enable XSS filter
+```
+
+Then restart:
+```bash
+docker compose down
+docker compose up -d
+```
+
+### Test Specific Scenarios
+```bash
+# Test normal login (should work)
+curl "http://localhost:8000/login?username=igor&password=igorpass"
+
+# Test SQLi attack (should be blocked if filter enabled)
+curl "http://localhost:8000/login?username=admin'%20OR%20'1'='1&password=anything"
+```
+
+---
 
 ## Expected Output
 
 When running the project, you should see:
 
-1. Normal login attempt:
-```
-Testing normal login:
-[admin | adminpass] → 200 | Login successful
-```
+1. **Attack discovery:**
+   ```
+   ✓ Discovered attack: SQL Injection Attack
+   ✓ Discovered attack: Cross-Site Scripting Attack
+   Found 2 attacks: sqli_attack, xss_attack
+   ```
 
-2. SQL injection attempt:
-```
-Testing SQL injection:
-[admin' OR 1=1 -- | anything] → 403 | Blocked by SQLi filter
-```
+2. **Filter discovery:**
+   ```
+   ✓ Discovered filter: sqli_filter
+   ✓ Discovered filter: xss_filter
+   ```
 
-3. Normal comment:
-```
-Testing normal comment:
-[Hello, this is a normal comment.] → 200 | Accepted
-```
+3. **Attack results:**
+   ```
+   Normal Login: ALLOWED (200)
+   SQLi Attack: BLOCKED (403)
+   Normal Comment: ALLOWED (200)
+   XSS Attack: BLOCKED (403)
+   ```
 
-4. XSS attempt:
-```
-Testing XSS injection:
-[<script>alert('XSS')</script>] → 403 | Blocked by XSS filter
-```
+---
+
+## Key Benefits of the Dynamic System
+
+✅ **No false positives**: Legitimate usernames like "Igor" are allowed  
+✅ **Easy extensibility**: Add new attacks/filters by just adding files  
+✅ **Zero code changes**: No need to modify main application code  
+✅ **Runtime configuration**: Enable/disable filters via environment variables  
+✅ **Automatic discovery**: New components are found and used automatically  
+✅ **Standardized interfaces**: All attacks/filters follow the same pattern  
+
+---
 
 ## Security Note
 
-This project is intentionally vulnerable and should only be used for educational purposes. Do not deploy it in production environments.
+- This project is for educational purposes only
+- The vulnerable app is intentionally insecure
+- Do not deploy in production environments
+- Use only in controlled testing environments
+
+---
+
+## Credits
+
+- Inspired by real-world web security testing scenarios
+- Dynamic discovery pattern for extensibility
+- Demonstrates modern software architecture principles
