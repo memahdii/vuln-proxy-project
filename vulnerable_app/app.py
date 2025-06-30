@@ -11,6 +11,7 @@ def init_db():
     c.execute("INSERT INTO users (username, password) VALUES ('admin', 'adminpass')")
     c.execute("INSERT INTO users (username, password) VALUES ('mahdi', 'mahdipass')")
     c.execute("INSERT INTO users (username, password) VALUES ('igor', 'igorpass')")
+    c.execute("INSERT INTO users (username, password) VALUES ('Morgan', 'pw')")
     conn.commit()
     conn.close()
 
